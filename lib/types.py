@@ -17,7 +17,7 @@ class Stamp:
     start: int
     end: int = None  # type: ignore
     type: StampType = StampType.EMPTY
-    msg: str = ""
+    label: str = ""
     extras: list[str] = field(default_factory=lambda: [])
 
     @property
@@ -59,14 +59,20 @@ class WorkDay:
         for s in self.stamps:
             if (not filter(s)):
                 continue
-            collected[s.msg] += s.length
+            collected[s.label] += s.length
         return dict(collected)
 
     def tickets(self) -> dict[str, int]:
-        return self.collect(lambda s: s.type == StampType.BILL and (s.msg == "MR" or s.msg.isdigit()))
+        return self.collect(lambda s: s.type == StampType.BILL and (s.label == "MR" or s.label.isdigit()))
 
     def bills(self) -> dict[str, int]:
         return self.collect(lambda s: s.type == StampType.BILL)
+
+    def admins(self) -> dict[str, int]:
+        return self.collect(lambda s: s.type == StampType.ADMIN)
+
+    def non_bills(self) -> dict[str, int]:
+        return self.collect(lambda s: s.type == StampType.NONBILL)
 
 
 @dataclass
