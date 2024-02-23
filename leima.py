@@ -5,6 +5,9 @@ from lib.io import parse_time, read_corrections, read_stamps, write_corections
 from lib.types import Correction
 
 
+WEEKDAYS = ["MA", "TI", "KE", "TO", "PE"]
+
+
 def ft(t: int) -> str:
     return f"{t//60}:{t%60:02d}"
 
@@ -54,11 +57,13 @@ def correct(args):
 
 
 def psa(args):
+    # TODO: mihin admiiniin kulunut aika????
     week_stamps = read_stamps(args.week)
     corrections = read_corrections(args.week)
     if corrections == None:
         corrections = [None]*len(week_stamps)
-    for day, cor in zip(week_stamps, corrections):
+    for day, cor, day_name in zip(week_stamps, corrections, WEEKDAYS):
+        print(day_name)
         non_bill = sum(day.non_bills().values())
         admins = day.admins()
         s_admins = sum(admins.values())
@@ -72,6 +77,20 @@ def psa(args):
             print(f'A  {ft(s_admins)}')
             print(f"  {', '.join(admins)}")
         print("********")
+
+
+def jir(args):
+    week_stamps = read_stamps(args.week)
+    corrections = read_corrections(args.week)
+    if corrections == None:
+        corrections = [Correction(0, {})]*len(week_stamps)
+    for day, cor, day_name in zip(week_stamps, corrections, WEEKDAYS):
+        print(day_name)
+        for label, time in day.tickets().items():
+            print(f"{label}")
+            t = (cor.cors.get(label) or time)
+            print(f"  {ft(t)} -- {(t/60):.2f}")
+        print()
 
 
 def main():
@@ -93,6 +112,11 @@ def main():
     psa_parser.add_argument(
         'week', type=int, default=current_week, nargs='?')
     psa_parser.set_defaults(func=psa)
+
+    jir_parser = sub_parsers.add_parser("jir")
+    jir_parser.add_argument(
+        'week', type=int, default=current_week, nargs='?')
+    jir_parser.set_defaults(func=jir)
 
     args = parser.parse_args()
     args.func(args)

@@ -1,6 +1,8 @@
 from pathlib import Path
 from lib.types import Correction, Stamp, StampType, WorkDay
 
+# TODO: yhdistä korjaukset
+
 
 def read_stamps(week: int) -> list[WorkDay]:
     week_stamps = []
