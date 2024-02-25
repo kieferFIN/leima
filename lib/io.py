@@ -1,5 +1,6 @@
 from pathlib import Path
-from lib.types import Correction, Stamp, StampType, WorkDay
+from typing import Iterator
+from lib.types import CorrectedDay, Correction, Stamp, StampType, WorkDay
 
 # TODO: yhdistä korjaukset
 
@@ -75,6 +76,15 @@ def read_corrections(week: int) -> list[Correction] | None:
                     current_cors[splitted[0]] = int(splitted[1])
 
     return ret
+
+
+def read_data(week: int) -> Iterator[CorrectedDay]:
+    work_days = read_stamps(week)
+    corrections = read_corrections(week)
+    if corrections == None:
+        corrections = [None]*len(work_days)
+    for d, c in zip(work_days, corrections):
+        yield CorrectedDay(d, c)
 
 
 def parse_time(t: str) -> int:

@@ -1,15 +1,23 @@
 from argparse import ArgumentParser
 from datetime import datetime
 
-from lib.io import parse_time, read_corrections, read_stamps, write_corections
+from lib.io import parse_time, read_corrections, read_data, read_stamps, write_corections
 from lib.types import Correction
 
 
 WEEKDAYS = ["MA", "TI", "KE", "TO", "PE"]
 
 
-def ft(t: int) -> str:
+def time(t: int) -> str:
     return f"{t//60}:{t%60:02d}"
+
+
+def hours(t: int) -> str:
+    return f"{(t/60):.2f}"
+
+
+def both(t: int) -> str:
+    return f"{time(t)} -- {hours(t)}"
 
 
 def nearest(number: int, near: int = 15) -> int:
@@ -25,30 +33,28 @@ def report(args):
             print(f"{t.name:<6}  {l:>3}")
         total = day.work_time
         week_total += total
-        print(f"total: {ft(total)}")
+        print(f"total: {both(total)}")
         print("****")
 
-    print(f"\nTOTAL: {ft(week_total)}")
+    print(f"\nTOTAL: {both(week_total)}")
 
 
 def correct(args):
-    week_stamps = read_stamps(args.week)
-    old_corrections = read_corrections(args.week)
-    if old_corrections == None:
-        old_corrections = [None]*len(week_stamps)
+
     new_corrections = []
-    for day, cor in zip(week_stamps, old_corrections):
-        print(f"{ft(day.start)}-{ft(day.end)} -> {ft(day.end-day.start)}")
-        print(f"total: {ft(day.work_time)}")
-        if cor != None:
-            print(f"previous correction {ft(cor.total)}")
+    for data, day in zip(read_data(args.week), WEEKDAYS):
+        print(day)
+        print(f"{time(data.workday.start)}-{time(data.workday.end)} -> {both(data.workday.end-data.workday.start)}")
+        print(f"total: {both(data.workday.work_time)}")
+        if data.is_corrected:
+            print(f"previous correction {time(data.correction.total)}")  # type: ignore
         input_str = input("new total? ").strip()
         if len(input_str) == 0:
-            new_corrections.append(cor)
+            new_corrections.append(data.correction)
             continue
         new_total = parse_time(input_str)
-        tickets = day.tickets()
-        more_time = new_total - day.work_time
+        tickets = data.workday.tickets()
+        more_time = new_total - data.workday.work_time
         per_ticket = more_time // len(tickets)
         for msg, t in tickets.items():
             tickets[msg] = nearest(t+per_ticket)
@@ -57,29 +63,30 @@ def correct(args):
 
 
 def psa(args):
-    # TODO: mihin admiiniin kulunut aika????
-    week_stamps = read_stamps(args.week)
-    corrections = read_corrections(args.week)
-    if corrections == None:
-        corrections = [None]*len(week_stamps)
-    for day, cor, day_name in zip(week_stamps, corrections, WEEKDAYS):
+    for data, day_name in zip(read_data(args.week), WEEKDAYS):
         print(day_name)
-        non_bill = sum(day.non_bills().values())
-        admins = day.admins()
+        non_bill = sum(data.workday.non_bills().values())
+        admins = data.workday.admins()
         s_admins = sum(admins.values())
 
-        total = cor.total if cor != None else day.work_time
+        total = data.total
         bills = total - non_bill - s_admins
-        print(f"B  {ft(bills)}")
+        print(f"B  {both(bills)}")
         if non_bill > 0:
-            print(f'NB {ft(non_bill)}')
+            print(f'NB {both(non_bill)}')
         if s_admins > 0:
-            print(f'A  {ft(s_admins)}')
-            print(f"  {', '.join(admins)}")
+            print(f'A  {both(s_admins)}')
+            for label, t in admins.items():
+                print(f"    {label:<10}   {both(t)}")
+                extras = data.workday.find_extras(lambda s: s.label is label)
+                if len(extras) > 0:
+                    print(f"    {','.join(extras)}")
+
         print("********")
 
 
 def jir(args):
+    # TOOD: tulostaa tiketin ei päivän mukaan
     week_stamps = read_stamps(args.week)
     corrections = read_corrections(args.week)
     if corrections == None:
@@ -89,7 +96,7 @@ def jir(args):
         for label, time in day.tickets().items():
             print(f"{label}")
             t = (cor.cors.get(label) or time)
-            print(f"  {ft(t)} -- {(t/60):.2f}")
+            print(f"  {both(t)}")
         print()
 
 

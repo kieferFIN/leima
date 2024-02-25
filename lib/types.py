@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable
+from typing import Callable, TypeAlias
 
 
 class StampType(Enum):
@@ -23,6 +23,9 @@ class Stamp:
     @property
     def length(self) -> int:
         return self.end - self.start
+
+
+StampFilter: TypeAlias = Callable[[Stamp], bool]
 
 
 @dataclass
@@ -54,7 +57,7 @@ class WorkDay:
     def end(self) -> int:
         return self.stamps[-1].end
 
-    def collect(self, filter: Callable[[Stamp], bool]) -> dict[str, int]:
+    def collect(self, filter: StampFilter) -> dict[str, int]:
         collected = defaultdict(int)
         for s in self.stamps:
             if (not filter(s)):
@@ -74,8 +77,25 @@ class WorkDay:
     def non_bills(self) -> dict[str, int]:
         return self.collect(lambda s: s.type == StampType.NONBILL)
 
+    def find_extras(self, filter: StampFilter) -> set[str]:
+        return {e for s in self.stamps for e in s.extras if filter(s)}
+
 
 @dataclass
 class Correction:
     total: int
     cors: dict[str, int]
+
+
+@dataclass
+class CorrectedDay:
+    workday: WorkDay
+    correction: Correction | None
+
+    @property
+    def is_corrected(self) -> bool:
+        return self.correction is not None
+
+    @property
+    def total(self) -> int:
+        return self.correction.total if self.correction is not None else self.workday.work_time
