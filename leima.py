@@ -99,6 +99,15 @@ def jir(args):
             print(f"{w}:  {'  '.join([hours(t) for t in times])}")
 
 
+def exe(args):
+    for week in args.weeks:
+        print(f"{week}:")
+        for i, data in enumerate(read_data(week)):
+            print(f" {WEEKDAYS[i]}")
+            for label, t in data.corrected_bills():
+                print(f"   {hours(t)}  {label}")
+
+
 def main():
     current_week = datetime.now().isocalendar()[1]
     parser = ArgumentParser()
@@ -123,6 +132,11 @@ def main():
     jir_parser.add_argument(
         'weeks', type=int, default=current_week, nargs='*')
     jir_parser.set_defaults(func=jir)
+
+    exe_parser = sub_parsers.add_parser("exe")
+    exe_parser.add_argument(
+        'weeks', type=int, default=current_week, nargs='*')
+    exe_parser.set_defaults(func=exe)
 
     args = parser.parse_args()
     args.func(args)

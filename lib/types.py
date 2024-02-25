@@ -100,9 +100,15 @@ class CorrectedDay:
     def total(self) -> int:
         return self.correction.total if self.correction is not None else self.workday.work_time
 
-    def corrected_tickets(self) -> Iterator[tuple[str, int]]:
-        for label, t in self.workday.tickets().items():
+    def corrected(self, filter: StampFilter) -> Iterator[tuple[str, int]]:
+        for label, t in self.workday.collect(filter).items():
             if self.correction is not None:
                 yield label, self.correction.cors.get(label) or t
             else:
                 yield label, t
+
+    def corrected_tickets(self) -> Iterator[tuple[str, int]]:
+        return self.corrected(lambda s: s.type == StampType.BILL and (s.label == "MR" or s.label.isdigit()))
+
+    def corrected_bills(self) -> Iterator[tuple[str, int]]:
+        return self.corrected(lambda s: s.type == StampType.BILL)
