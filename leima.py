@@ -1,7 +1,8 @@
 from argparse import ArgumentParser
+from collections import defaultdict
 from datetime import datetime
 
-from lib.io import parse_time, read_corrections, read_data, read_stamps, write_corections
+from lib.io import parse_time, read_data, read_stamps, write_corections
 from lib.types import Correction
 
 
@@ -86,18 +87,16 @@ def psa(args):
 
 
 def jir(args):
-    # TOOD: tulostaa tiketin ei päivän mukaan
-    week_stamps = read_stamps(args.week)
-    corrections = read_corrections(args.week)
-    if corrections == None:
-        corrections = [Correction(0, {})]*len(week_stamps)
-    for day, cor, day_name in zip(week_stamps, corrections, WEEKDAYS):
-        print(day_name)
-        for label, time in day.tickets().items():
-            print(f"{label}")
-            t = (cor.cors.get(label) or time)
-            print(f"  {both(t)}")
-        print()
+    tickets = defaultdict(lambda: [[0]*5 for _ in range(len(args.weeks))])
+    for w, week in enumerate(args.weeks):
+        for i, data in enumerate(read_data(week)):
+            for label, t in data.corrected_tickets():
+                tickets[label][w][i] = t
+
+    for label, data in tickets.items():
+        print(label)
+        for w, times in zip(args.weeks, data):
+            print(f"{w}:  {'  '.join([hours(t) for t in times])}")
 
 
 def main():
@@ -122,7 +121,7 @@ def main():
 
     jir_parser = sub_parsers.add_parser("jir")
     jir_parser.add_argument(
-        'week', type=int, default=current_week, nargs='?')
+        'weeks', type=int, default=current_week, nargs='*')
     jir_parser.set_defaults(func=jir)
 
     args = parser.parse_args()

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, TypeAlias
+from typing import Callable, Iterator, TypeAlias
 
 
 class StampType(Enum):
@@ -99,3 +99,10 @@ class CorrectedDay:
     @property
     def total(self) -> int:
         return self.correction.total if self.correction is not None else self.workday.work_time
+
+    def corrected_tickets(self) -> Iterator[tuple[str, int]]:
+        for label, t in self.workday.tickets().items():
+            if self.correction is not None:
+                yield label, self.correction.cors.get(label) or t
+            else:
+                yield label, t
