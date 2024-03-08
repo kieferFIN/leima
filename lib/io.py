@@ -1,12 +1,10 @@
 from pathlib import Path
 from typing import Iterator
-from lib.types import CorrectedDay, Correction, Stamp, StampType, WorkDay
-
-# TODO: yhdistä korjaukset
+from lib.types import CorrectedDay, Correction, Stamp, StampType, Time, WorkDay
 
 
 def read_stamps(week: int) -> list[WorkDay]:
-    week_stamps = []
+    week_stamps: list[WorkDay] = []
     current_day = WorkDay()
     current_stamp = None
     with open(f"aikaleimat/{week:02d}.txt", 'r') as f:
@@ -52,7 +50,7 @@ def write_corections(week: int, corrections: list[Correction]) -> None:
 def read_corrections(week: int) -> list[Correction] | None:
     ret = []
     current_total = 0
-    current_cors: dict[str, int] = dict()
+    current_cors: dict[str, Time] = dict()
     file = Path(f"aikaleimat/{week:02d}c.txt")
     if not file.is_file():
         return None
@@ -71,9 +69,9 @@ def read_corrections(week: int) -> list[Correction] | None:
             else:
                 splitted = line.split(' ')
                 if len(splitted) == 1:
-                    current_total = int(splitted[0])
+                    current_total = Time(int(splitted[0]))
                 else:
-                    current_cors[splitted[0]] = int(splitted[1])
+                    current_cors[splitted[0]] = Time(int(splitted[1]))
 
     return ret
 
@@ -87,7 +85,7 @@ def read_data(week: int) -> Iterator[CorrectedDay]:
         yield CorrectedDay(d, c)
 
 
-def parse_time(t: str) -> int:
+def parse_time(t: str) -> Time:
     m = int(t[-2:])
     h = int(t[:-2])
-    return h * 60 + m
+    return Time(h * 60 + m)

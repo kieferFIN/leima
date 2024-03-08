@@ -1,28 +1,12 @@
 from argparse import ArgumentParser
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 from lib.io import parse_time, read_data, read_stamps, write_corections
-from lib.types import Correction
+from lib.types import Correction, Time
 
 
 WEEKDAYS = ["MA", "TI", "KE", "TO", "PE"]
-
-
-def time(t: int) -> str:
-    return f"{t//60}:{t%60:02d}"
-
-
-def hours(t: int) -> str:
-    return f"{(t/60):.2f}"
-
-
-def both(t: int) -> str:
-    return f"{time(t)} -- {hours(t)}"
-
-
-def nearest(number: int, near: int = 15) -> int:
-    return round(number/near)*near
 
 
 def report(args):
@@ -34,10 +18,10 @@ def report(args):
             print(f"{t.name:<6}  {l:>3}")
         total = day.work_time
         week_total += total
-        print(f"total: {both(total)}")
+        print(f"total: {total:th}")
         print("****")
 
-    print(f"\nTOTAL: {both(week_total)}")
+    print(f"\nTOTAL: {week_total:th}")
 
 
 def correct(args):
@@ -45,10 +29,10 @@ def correct(args):
     new_corrections = []
     for data, day in zip(read_data(args.week), WEEKDAYS):
         print(day)
-        print(f"{time(data.workday.start)}-{time(data.workday.end)} -> {both(data.workday.end-data.workday.start)}")
-        print(f"total: {both(data.workday.work_time)}")
+        print(f"{data.workday.start:t}-{data.workday.end:t} -> {data.workday.end-data.workday.start:th}")
+        print(f"total: {data.workday.work_time:th}")
         if data.is_corrected:
-            print(f"previous correction {time(data.correction.total)}")  # type: ignore
+            print(f"previous correction {data.correction.total:t}")  # type: ignore
         input_str = input("new total? ").strip()
         if len(input_str) == 0:
             new_corrections.append(data.correction)
@@ -58,7 +42,7 @@ def correct(args):
         more_time = new_total - data.workday.work_time
         per_ticket = more_time // len(tickets)
         for msg, t in tickets.items():
-            tickets[msg] = nearest(t+per_ticket)
+            tickets[msg] = (t+per_ticket).nearest()
         new_corrections.append(Correction(new_total, tickets))
     write_corections(args.week, new_corrections)
 
@@ -72,13 +56,13 @@ def psa(args):
 
         total = data.total
         bills = total - non_bill - s_admins
-        print(f"B  {both(bills)}")
+        print(f"B  {bills:th}")
         if non_bill > 0:
-            print(f'NB {both(non_bill)}')
+            print(f'NB {non_bill:th}')
         if s_admins > 0:
-            print(f'A  {both(s_admins)}')
+            print(f'A  {s_admins:th}')
             for label, t in admins.items():
-                print(f"    {label:<10}   {both(t)}")
+                print(f"    {label:<10}   {t:th}")
                 extras = data.workday.find_extras(lambda s: s.label is label)
                 if len(extras) > 0:
                     print(f"    {','.join(extras)}")
@@ -87,7 +71,7 @@ def psa(args):
 
 
 def jir(args):
-    tickets = defaultdict(lambda: [[0]*5 for _ in range(len(args.weeks))])
+    tickets = defaultdict(lambda: [[Time()]*5 for _ in range(len(args.weeks))])
     for w, week in enumerate(args.weeks):
         for i, data in enumerate(read_data(week)):
             for label, t in data.corrected_tickets():
@@ -96,16 +80,19 @@ def jir(args):
     for label, data in tickets.items():
         print(label)
         for w, times in zip(args.weeks, data):
-            print(f"{w}:  {'  '.join([hours(t) for t in times])}")
+            print(f"{w}:  {'  '.join([f'{t:h}' for t in times])}")
 
 
-def exe(args):
+def exc(args):
+    # TODO: desimaalipilkku
     for week in args.weeks:
         print(f"{week}:")
+        day = date.fromisocalendar(2024, int(week), 1)
         for i, data in enumerate(read_data(week)):
-            print(f" {WEEKDAYS[i]}")
+            print(f" {WEEKDAYS[i]} {day:%d.%m.%Y}")
             for label, t in data.corrected_bills():
-                print(f"   {hours(t)}  {label}")
+                print(f"   {t.nearest():h}  {label}")
+            day = day + timedelta(1)
 
 
 def main():
@@ -133,10 +120,10 @@ def main():
         'weeks', type=int, default=current_week, nargs='*')
     jir_parser.set_defaults(func=jir)
 
-    exe_parser = sub_parsers.add_parser("exe")
-    exe_parser.add_argument(
+    exc_parser = sub_parsers.add_parser("exc")
+    exc_parser.add_argument(
         'weeks', type=int, default=current_week, nargs='*')
-    exe_parser.set_defaults(func=exe)
+    exc_parser.set_defaults(func=exc)
 
     args = parser.parse_args()
     args.func(args)
