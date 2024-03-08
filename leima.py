@@ -84,15 +84,39 @@ def jir(args):
 
 
 def exc(args):
+    cates = create_categories()
     # TODO: desimaalipilkku
-    for week in args.weeks:
-        print(f"{week}:")
-        day = date.fromisocalendar(2024, int(week), 1)
-        for i, data in enumerate(read_data(week)):
-            print(f" {WEEKDAYS[i]} {day:%d.%m.%Y}")
-            for label, t in data.corrected_bills():
-                print(f"   {t.nearest():h}  {label}")
-            day = day + timedelta(1)
+    with open("tunnit.txt", 'w')as f:
+        for week in args.weeks:
+            # print(f"{week}:")
+            day = date.fromisocalendar(2024, int(week), 1)
+            for i, data in enumerate(read_data(week)):
+                for label, t in data.corrected_bills():
+                    if label.isdigit():
+                        cate = 15
+                    else:
+                        cate = cates.get(label)
+                    if cate is None:
+                        print(f"{day:%d.%m.%Y} {label}")
+                        cate = ' '
+                    f.write(f"{day:%d.%m.%Y};{t.nearest():h};{cate};{label}\n")
+                day = day + timedelta(1)
+
+
+def create_categories() -> dict[str, int]:
+    cate: dict[str, int] = {}
+    category = -1
+    with open("task_classes.txt", 'r') as f:
+        for line in f:
+            line = line.strip()
+            if len(line) == 0:
+                continue
+            if line.startswith('#'):
+                category = int(line[1:])
+                continue
+            cate[line] = category
+
+    return cate
 
 
 def main():

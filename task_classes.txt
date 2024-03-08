@@ -1,0 +1,12 @@
+#1
+daily
+retro
+sprint planning
+
+#2
+sprint preview
+feature preview
+review and planning
+
+#15
+mr
